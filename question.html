@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>لعبة صراحة وجرأة</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Cairo&display=swap" rel="stylesheet">
+
+<style>
+*{box-sizing:border-box;font-family:Cairo}
+body{
+  margin:0;
+  background:#f5f5f5;
+  height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+.screen{
+  width:90%;
+  max-width:360px;
+  background:white;
+  padding:20px;
+  border-radius:15px;
+  text-align:center;
+}
+button{
+  width:100%;
+  padding:12px;
+  margin:8px 0;
+  border:none;
+  border-radius:10px;
+  background:#e53935;
+  color:white;
+  cursor:pointer;
+  font-size:16px;
+}
+input{
+  width:100%;
+  padding:10px;
+  margin:10px 0;
+  border-radius:8px;
+  border:1px solid #ccc;
+}
+.hidden{display:none}
+</style>
+</head>
+
+<body>
+
+<!-- اختيار الفئة -->
+<div class="screen" id="categoryScreen">
+  <h2>🎮 اختر فئة</h2>
+  <button onclick="startGame(saraha)">صراحة</button>
+  <button onclick="startGame(garaa)">جرأة</button>
+  <button onclick="startGame(tahadi)">تحدي</button>
+  <button onclick="startGame(flags)">Red / Green Flag</button>
+</div>
+
+<!-- شاشة اللعب -->
+<div class="screen hidden" id="gameScreen">
+  <h3 id="questionText"></h3>
+  <input id="answerInput" placeholder="اكتب إجابتك">
+  <button onclick="nextQuestion()">التالي</button>
+</div>
+
+<!-- النهاية -->
+<div class="screen hidden" id="endScreen">
+  <h2>🎉 خلصت اللعبة</h2>
+  <button onclick="downloadImage()">تحميل صورة</button>
+  <button onclick="downloadPDF()">تحميل PDF</button>
+</div>
+
+<!-- صندوق التصدير -->
+<div id="exportBox" style="
+display:none;
+background:#e53935;
+color:white;
+padding:20px;
+border-radius:15px;
+width:350px;
+font-family:Cairo">
+<h3 style="text-align:center">نتيجة اللعبة</h3>
+<div id="exportContent"></div>
+<p style="text-align:center;font-size:12px;opacity:.8">Made with ❤️</p>
+</div>
+
+<!-- مكتبات -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+// ================= الأسئلة =================
+
+const saraha = [
+"لو هتوصفني بكلمة هتكون ايه؟",
+"إيه أكتر حاجة بتفكرك بيا؟",
+"كلمة بتحب تسمعها؟",
+"إمتى حسيت إنك مبسوط بجد؟",
+"إيه أكتر ذكرى حلوة؟",
+"بتحب الاهتمام ولا المساحة؟",
+"إيه صفة نفسك تحافظ عليها؟",
+"إيه أكتر حاجة بتقدّرها؟",
+"بتحب تعبر عن مشاعرك؟",
+"لو توصف نفسك بكلمة؟"
+];
+
+const garaa = [
+"قول حاجة عمرك ما قولتها",
+"إيه أكبر ضعف فيك؟",
+"موقف ندمت عليه؟",
+"إيه أكتر حاجة بتخوفك؟",
+"هل بتكابر وانت زعلان؟",
+"قرار صعب أخدته؟",
+"إيه سر بسيط عنك؟",
+"مين أكتر شخص أثر فيك؟",
+"إيه أكتر حاجة بتفرحك؟",
+"إيه عادة حابب تغيّرها؟"
+];
+
+const tahadi = [
+"اكتب 3 صفات حلوة في نفسك",
+"قول حاجة إيجابية فيا ",
+"اختار هدف نفسك تحققه معايا",
+"اكتب رساله قصيرة من قلبك ",
+" اذكر حاجة ممتن ليهاانا السبب فيها",
+"قول اعتراف عن ماضيك ",
+"رتب حسب الاهم بنسبالك(الجمال - الشخصية - المقدرة المالية - الحنية - الصدق )",
+"قول اول مكان نفسك المسه فيه ",
+"قول كلمة جريئة عمرك ماقولتها قبل كده",
+"اوصف لي الطريقة اللي تحب تبوسني بيها "
+];
+
+const flags = [
+"راجل بياخد رأي أهله قبل اي خطوة",
+"بنت بتحكس اسرار بيتها لصاحبها ",
+"بنت بتخلي أهلها يدخلو لحل اي مشاكل بينها وبين شريك حياتها",
+"التجاهل",
+"الاعتذار",
+"التحكم",
+"راجل بيستني البنت تصالحه ",
+"الغيرة المبالغ فيها ",
+"الوضوح حتي لو مؤذي",
+"الاستهانة بالمشاعر "
+];
+
+// =============== منطق اللعبة =================
+
+let questions = [];
+let index = 0;
+let answers = [];
+
+function startGame(selected){
+  questions = selected;
+  index = 0;
+  answers = [];
+  document.getElementById("categoryScreen").classList.add("hidden");
+  document.getElementById("gameScreen").classList.remove("hidden");
+  showQuestion();
+}
+
+function showQuestion(){
+  document.getElementById("questionText").innerText = questions[index];
+}
+
+function nextQuestion(){
+  const val = document.getElementById("answerInput").value;
+  answers.push({q:questions[index],a:val || "—"});
+  document.getElementById("answerInput").value="";
+  index++;
+
+  if(index < questions.length){
+    showQuestion();
+  }else{
+    document.getElementById("gameScreen").classList.add("hidden");
+    document.getElementById("endScreen").classList.remove("hidden");
+  }
+}
+
+// =============== تصدير =================
+
+function prepareExport(){
+  const box = document.getElementById("exportBox");
+  const content = document.getElementById("exportContent");
+  content.innerHTML = "";
+
+  answers.forEach(x=>{
+    content.innerHTML += `<p><b>${x.q}</b><br>${x.a}</p>`;
+  });
+
+  box.style.display="block";
+}
+
+function downloadImage(){
+  prepareExport();
+  const box = document.getElementById("exportBox");
+
+  html2canvas(box,{scale:2}).then(canvas=>{
+    const a=document.createElement("a");
+    a.download="result.png";
+    a.href=canvas.toDataURL();
+    a.click();
+    box.style.display="none";
+  });
+}
+
+function downloadPDF(){
+  prepareExport();
+  const box = document.getElementById("exportBox");
+
+  html2canvas(box,{scale:2}).then(canvas=>{
+    const img = canvas.toDataURL("image/png");
+    const {jsPDF} = window.jspdf;
+    const pdf = new jsPDF();
+    pdf.addImage(img,"PNG",10,10,190,0);
+    pdf.save("result.pdf");
+    box.style.display="none";
+  });
+}
+</script>
+
+</body>
+</html>
